@@ -7,11 +7,11 @@ package ch4
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 
-//object FuturesCreate extends App{
-//  Future {log("the future is here")}
-//  log("the future is coming")
-//  Thread.sleep(1000)
-//}
+object FuturesCreate extends App{
+  Future {log("the future is here")}
+  log("the future is coming")
+  Thread.sleep(1000)
+}
 
 import scala.io.Source
 object FuturesDataType extends App{
@@ -25,3 +25,39 @@ object FuturesDataType extends App{
   log(s"status: ${buildFile.isCompleted}")
   log(s"value: ${buildFile.value}")
 }
+
+object FurturesCallbacks extends App {
+  def getUrlSpec(): Future[List[String]] = Future {
+    val url = "http://www.w3.org/Addressing/URL/url-spec.txt"
+    val f = Source.fromURL(url)
+    try f.getLines().toList finally f.close()
+  }
+  val urlSpec: Future[List[String]] = getUrlSpec()
+
+  def find(lines: List[String], keyword: String): String =
+    lines.zipWithIndex collect{
+      case (line, n) if line.contains(keyword) => (n, line)
+    } mkString("\n")
+
+  urlSpec foreach{
+    case lines => log(find(lines, "telnet"))
+  }
+  log("callback registered, continuing with other work")
+  Thread.sleep(2000)
+}
+
+object FuturesFailure extends App {
+  val urlSpec: Future[String] = Future{
+    val invalidUrl = "http://www.w3.org/non-existent-url-spec.txt"
+    Source.fromURL(invalidUrl).mkString
+  }
+  urlSpec.failed foreach{
+    case t => log(s"exception occurred - $t")
+  }
+  log("callback registered, continuing with other work")
+  Thread.sleep(1000)      // if not, the main thread may end, and so does the future thread
+}
+
+import java.io._
+import scala.collection.convert.decorateAsScala._
+//import org.apache.commons.io.FileUtils._
